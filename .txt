@@ -1,1 +1,220 @@
 
+-- Hizmetler
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+local Player = Players.LocalPlayer
+
+-- Eğer daha önce oluşturulduysa eskisini sil
+if CoreGui:FindFirstChild("AntiAfkMiniGui") then
+    CoreGui.AntiAfkMiniGui:Destroy()
+end
+
+-- Ana UI Container
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiAfkMiniGui"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Ana Çerçeve (Kompakt ve Kırmızı Tema)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 200, 0, 165)
+MainFrame.Position = UDim2.new(0.5, -100, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- Üst Kırmızı Vurgu Çizgisi
+local AccentLine = Instance.new("Frame")
+AccentLine.Size = UDim2.new(1, 0, 0, 3)
+AccentLine.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
+AccentLine.BorderSizePixel = 0
+AccentLine.Parent = MainFrame
+
+-- Başlık
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -16, 0, 28)
+TitleLabel.Position = UDim2.new(0, 8, 0, 5)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "⚡ Anti-AFK & Stats"
+TitleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainFrame
+
+-- Bilgi Paneli (FPS, MS, Süre)
+local StatsFrame = Instance.new("Frame")
+StatsFrame.Size = UDim2.new(1, -16, 0, 65)
+StatsFrame.Position = UDim2.new(0, 8, 0, 35)
+StatsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+StatsFrame.BorderSizePixel = 0
+StatsFrame.Parent = MainFrame
+
+local StatsCorner = Instance.new("UICorner")
+StatsCorner.CornerRadius = UDim.new(0, 6)
+StatsCorner.Parent = StatsFrame
+
+-- FPS Label
+local FpsLabel = Instance.new("TextLabel")
+FpsLabel.Size = UDim2.new(1, -10, 0, 20)
+FpsLabel.Position = UDim2.new(0, 5, 0, 3)
+FpsLabel.BackgroundTransparency = 1
+FpsLabel.Text = "FPS: Hesapla..."
+FpsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+FpsLabel.TextSize = 11
+FpsLabel.Font = Enum.Font.GothamMedium
+FpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+FpsLabel.Parent = StatsFrame
+
+-- MS Label
+local MsLabel = Instance.new("TextLabel")
+MsLabel.Size = UDim2.new(1, -10, 0, 20)
+MsLabel.Position = UDim2.new(0, 5, 0, 22)
+MsLabel.BackgroundTransparency = 1
+MsLabel.Text = "MS (Ping): Hesapla..."
+MsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+MsLabel.TextSize = 11
+MsLabel.Font = Enum.Font.GothamMedium
+MsLabel.TextXAlignment = Enum.TextXAlignment.Left
+MsLabel.Parent = StatsFrame
+
+-- Süre Label
+local TimeLabel = Instance.new("TextLabel")
+TimeLabel.Size = UDim2.new(1, -10, 0, 20)
+TimeLabel.Position = UDim2.new(0, 5, 0, 41)
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.Text = "Süre: 00:00:00"
+TimeLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+TimeLabel.TextSize = 11
+TimeLabel.Font = Enum.Font.GothamMedium
+TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+TimeLabel.Parent = StatsFrame
+
+-- Toggle Butonu (Anti-AFK Kontrol)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(1, -16, 0, 30)
+ToggleButton.Position = UDim2.new(0, 8, 0, 108)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleButton.Text = "Anti-AFK: KAPALI"
+ToggleButton.TextColor3 = Color3.fromRGB(170, 170, 170)
+ToggleButton.TextSize = 12
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = MainFrame
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 6)
+ButtonCorner.Parent = ToggleButton
+
+-- Sürükleme (Draggable) Özelliği
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- FPS ve MS Hesaplama Döngüsü
+local frameCount = 0
+local lastUpdate = tick()
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = tick()
+    if now - lastUpdate >= 1 then
+        local fps = math.floor(frameCount / (now - lastUpdate))
+        FpsLabel.Text = "FPS: " .. fps
+        
+        pcall(function()
+            local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            MsLabel.Text = "MS (Ping): " .. ping .. " ms"
+        end)
+        
+        frameCount = 0
+        lastUpdate = now
+    end
+end)
+
+-- Oyunda Kalınan Süre Hesaplama
+local sessionStart = tick()
+task.spawn(function()
+    while task.wait(1) do
+        local totalSeconds = math.floor(tick() - sessionStart)
+        local hours = math.floor(totalSeconds / 3600)
+        local minutes = math.floor((totalSeconds % 3600) / 60)
+        local seconds = totalSeconds % 60
+        TimeLabel.Text = string.format("Süre: %02d:%02d:%02d", hours, minutes, seconds)
+    end
+end)
+
+-- Anti-AFK Mantığı ve Kütüphane Entegrasyonu (Başlangıçta Kapalı)
+local antiAfkThread = nil
+local uiState = false
+
+local function ToggleAntiAfk(Value)
+    uiState = Value
+    if Value then
+        ToggleButton.Text = "Anti-AFK: AÇIK"
+        TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(180, 20, 40)}):Play()
+        TweenService:Create(ToggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        
+        antiAfkThread = task.spawn(function()
+            while uiState do
+                task.wait(600) -- 10 Dakika
+                if not uiState then break end
+                pcall(function()
+                    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                    task.wait(1)
+                    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                end)
+            end
+        end)
+    else
+        ToggleButton.Text = "Anti-AFK: KAPALI"
+        TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        TweenService:Create(ToggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(170, 170, 170)}):Play()
+        
+        if antiAfkThread then
+            task.cancel(antiAfkThread)
+            antiAfkThread = nil
+        end
+    end
+end
+
+-- Mini UI üzerindeki butona basılınca tetiklenme
+ToggleButton.MouseButton1Click:Connect(function()
+    ToggleAntiAfk(not uiState)
+end)
+
+-- Kütüphane Fonksiyonu (Başlangıçta false gelir, çalışmaz)
+Misc:AddSwatch("⏰ Anti Afk", function(Value)
+    ToggleAntiAfk(Value)
+end)
